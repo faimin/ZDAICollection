@@ -54,6 +54,7 @@
     - **访问控制：** 默认使用默认的内部访问级别。仅在必要时使用 `private` 或 `public`。
     - **Optionals：** 尽量避免强制解包 `!`。优先使用 `if let` 或 `guard let`。
     - **@State vs @ObservedObject：** 视图内的局部状态用 `@State`，视图模型用 `@ObservedObject`。
+    - **Objective-C属性初始化：** 通过`getter`初始化属性时，先临时变量配置，最后赋给属性 `ivar`，以减少全局变量的使用。
 - **注释：** 为复杂的逻辑块添加简短的注释，解释“为什么”而不是“做什么”。
 
 ---
