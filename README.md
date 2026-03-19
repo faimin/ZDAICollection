@@ -11,6 +11,7 @@ iOS development AI agent skills collection
 - [superpowers](https://github.com/obra/superpowers): 一套行之有效的软件开发方法论
 - [ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill): 让AI写出来的UI更美观
 - [Super Skills](https://github.com/onmyway133/skills)
+- [MixMax Skills](https://github.com/MiniMax-AI/skills)
 ----
 - [Swift-Concurrency-Agent-Skill](https://github.com/AvdLee/Swift-Concurrency-Agent-Skill): Swift并发编程Agent技能
 - [SwiftUI-Agent-Skill](https://github.com/AvdLee/SwiftUI-Agent-Skill): SwiftUI Agent技能
