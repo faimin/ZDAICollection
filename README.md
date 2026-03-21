@@ -9,6 +9,8 @@ iOS development AI agent skills collection
 # SKILLS
 
 - [superpowers](https://github.com/obra/superpowers): 一套行之有效的软件开发方法论
+- [Get Shit Done](https://github.com/gsd-build/get-shit-done): 项目管理系统，快速创建一个项目
+----
 - [ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill): 让AI写出来的UI更美观
 - [Super Skills](https://github.com/onmyway133/skills)
 - [MixMax Skills](https://github.com/MiniMax-AI/skills)
