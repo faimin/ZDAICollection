@@ -4,45 +4,222 @@ Use this reference when choosing how much architectural structure an Apple app o
 
 ## Core Principle
 
-Choose the smallest architecture that keeps state ownership, effects, and navigation understandable. Do not pay TCA complexity for screens that only need straightforward local state.
+Choose the smallest architecture that keeps state ownership, effects, and navigation understandable. Do not pay TCA or Clean Architecture complexity for screens that only need straightforward local state.
+
+## Decision Framework
+
+```
+START
+  |
+  v
+Is the module written in Objective-C?
+  YES -> MVP (Presenter owns logic, View is passive UIViewController)
+  |
+  v
+Is the module written in Swift with UIKit?
+  YES -> MVI (Intent enum + Combine state pipeline)
+  |
+  v
+Is the module SwiftUI-first with simple local state?
+  YES -> MVVM with @Observable
+  |
+  v
+Do multiple features share state or trigger effects in each other?
+  YES -> TCA (app-level)
+  |
+  v
+Does the project require strict domain/data/presentation separation?
+  YES -> Clean Architecture
+  |
+  v
+Is navigation complex with deep linking and conditional flows?
+  YES -> Add Coordinator pattern on top of the chosen architecture
+```
+
+## Selection Matrix
+
+| Pattern | Best For | Language | Complexity | Testability | Scope |
+|---------|----------|---------|-----------|-------------|-------|
+| **MVP** | Objective-C modules, passive views | Objective-C | Low | High | Per-feature |
+| **MVI** | Swift UIKit, complex state transitions | Swift | Medium | High | Per-page |
+| **MVVM** | SwiftUI screens, simple features | Swift/SwiftUI | Low | High | Per-feature |
+| **TCA** | Large apps, composable features, strong testing | Swift | High | Very High | App-wide |
+| **Clean Architecture** | Enterprise apps, strict layer separation | Swift | High | Very High | App-wide |
+| **Coordinator** | Complex navigation flows (UIKit or hybrid) | Both | Medium | High | Cross-feature |
+
+## MVP (Objective-C Default)
+
+MVP (Model-View-Presenter) is the default architecture for Objective-C modules. The View (UIViewController) is passive — it forwards user actions to the Presenter and renders state it receives back. The Presenter owns all logic and talks to the Model layer.
+
+Prefer MVP when:
+- the module is written in Objective-C
+- you want clear testability by testing the Presenter in isolation
+- the View should contain zero business logic
+
+```objc
+// MARK: - Presenter Protocol
+@protocol ArticleListPresenterProtocol <NSObject>
+- (void)viewDidLoad;
+- (void)didSelectItemAtIndex:(NSInteger)index;
+- (void)didPullToRefresh;
+@end
+
+// MARK: - View Protocol (Presenter -> View)
+@protocol ArticleListViewProtocol <NSObject>
+- (void)showLoading;
+- (void)hideLoading;
+- (void)reloadWithItems:(NSArray<ArticleViewModel *> *)items;
+- (void)showError:(NSString *)message;
+@end
+
+// MARK: - Presenter
+@interface ArticleListPresenter : NSObject <ArticleListPresenterProtocol>
+@property (nonatomic, weak) id<ArticleListViewProtocol> view;
+- (instancetype)initWithService:(id<ArticleServiceProtocol>)service
+                     coordinator:(id<ArticleCoordinatorProtocol>)coordinator;
+@end
+
+@implementation ArticleListPresenter {
+    id<ArticleServiceProtocol> _service;
+    id<ArticleCoordinatorProtocol> _coordinator;
+    NSArray<Article *> *_articles;
+}
+
+- (instancetype)initWithService:(id<ArticleServiceProtocol>)service
+                     coordinator:(id<ArticleCoordinatorProtocol>)coordinator {
+    if (self = [super init]) {
+        _service = service;
+        _coordinator = coordinator;
+    }
+    return self;
+}
+
+- (void)viewDidLoad {
+    [self loadArticles];
+}
+
+- (void)didPullToRefresh {
+    [self loadArticles];
+}
+
+- (void)didSelectItemAtIndex:(NSInteger)index {
+    if (index < (NSInteger)_articles.count) {
+        [_coordinator showArticleDetail:_articles[index]];
+    }
+}
+
+- (void)loadArticles {
+    [self.view showLoading];
+    __weak typeof(self) weakSelf = self;
+    [_service fetchArticlesWithCompletion:^(NSArray<Article *> *articles, NSError *error) {
+        __strong typeof(weakSelf) self = weakSelf;
+        if (!self) return;
+        [self.view hideLoading];
+        if (error) {
+            [self.view showError:error.localizedDescription];
+            return;
+        }
+        self->_articles = articles;
+        NSArray *viewModels = [articles xx_map:^(Article *a) {
+            return [[ArticleViewModel alloc] initWithArticle:a];
+        }];
+        [self.view reloadWithItems:viewModels];
+    }];
+}
+
+@end
+
+// MARK: - ViewController (passive View)
+@interface ArticleListViewController () <ArticleListViewProtocol>
+@property (nonatomic, strong) id<ArticleListPresenterProtocol> presenter;
+@end
+
+@implementation ArticleListViewController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    [self.presenter viewDidLoad];
+}
+
+- (void)showLoading {
+    // 显示加载指示器
+}
+
+- (void)hideLoading {
+    // 隐藏加载指示器
+}
+
+- (void)reloadWithItems:(NSArray<ArticleViewModel *> *)items {
+    // 刷新列表数据
+}
+
+- (void)showError:(NSString *)message {
+    // 显示错误提示
+}
+
+@end
+```
+
+Key rules:
+- ViewController contains ZERO business logic — only UI rendering and forwarding user actions
+- Presenter does not import UIKit — it works through the View protocol
+- Navigation is delegated to a Coordinator, not owned by the Presenter
+- View protocol methods describe UI state changes, not implementation details
 
 ## MVVM
 
 Prefer MVVM when:
-- a feature has one or a few screens
+- the module uses SwiftUI
 - state is mostly local to the feature
 - async work is present but manageable
 - the team wants a familiar default with clear test seams
 
-Strengths:
-- easy to teach
-- works well with SwiftUI and UIKit
-- scales well for many app features before heavier coordination is necessary
+```swift
+@Observable
+class TripListViewModel {
+    private(set) var trips: [TripRowItem] = []
+    private(set) var isLoading = false
+    var searchText = ""
+
+    var filteredTrips: [TripRowItem] {
+        guard !searchText.isEmpty else { return trips }
+        return trips.filter { $0.name.localizedStandardContains(searchText) }
+    }
+
+    private let repository: TripRepository
+
+    init(repository: TripRepository) {
+        self.repository = repository
+    }
+
+    func loadTrips() async {
+        isLoading = true
+        defer { isLoading = false }
+        let models = (try? await repository.fetchAll()) ?? []
+        trips = models.map { TripRowItem(from: $0) }
+    }
+}
+```
+
+Core rules:
+- ViewModels must NOT import SwiftUI — `import Foundation` only
+- One ViewModel per screen, not per view
+- Dependencies injected via init, not created internally
+- Use `@Observable` for iOS 17+ targets; fall back to `ObservableObject` only for iOS 16
 
 Risks:
 - view models can become dumping grounds if state, navigation, and service orchestration are not split carefully
 
 ## MVI (Page-Level)
 
-MVI applies at the **page or feature level**. Use it when a single screen or flow benefits from explicit, traceable intent → state transitions, but the complexity does not yet span multiple features.
+MVI applies at the **page or feature level**. Use it when a single screen or flow benefits from explicit, traceable intent -> state transitions, but the complexity does not yet span multiple features.
 
 Prefer MVI when:
 - a screen has non-trivial state transitions (forms, wizards, multi-step flows)
 - state derivation should be easy to trace and unit-test
 - unidirectional flow is desirable without committing to a whole-app store
 
-Strengths:
-- explicit intent → state pipeline, easy to follow and test
-- Combine publishers and Swift enum associated values make the pattern natural
-- page-scoped: no global store, no cross-feature coupling
-
-Risks:
-- ceremony overhead for screens that only need local state
-
-### Best Practice: MVI with Combine and Enum Associated Values
-
 ```swift
-// MARK: - Intent (user actions as typed enum with associated values)
 enum FeedIntent {
     case viewDidLoad
     case refresh
@@ -50,7 +227,6 @@ enum FeedIntent {
     case itemTapped(id: String)
 }
 
-// MARK: - State (value type, single source of truth for one page)
 struct FeedState {
     var items: [FeedItem] = []
     var isLoading = false
@@ -58,7 +234,6 @@ struct FeedState {
     var error: String?
 }
 
-// MARK: - ViewModel (page-scoped, owns the Combine lifecycle)
 final class FeedViewModel {
     @Published private(set) var state = FeedState()
 
@@ -76,7 +251,7 @@ final class FeedViewModel {
         case .searchQueryChanged(let query):
             state.searchQuery = query
         case .itemTapped:
-            break // route via coordinator — ViewModel does not own navigation
+            break
         }
     }
 
@@ -97,26 +272,15 @@ final class FeedViewModel {
             .store(in: &cancellables)
     }
 }
-
-// MARK: - UIViewController binding
-final class FeedViewController: UIViewController {
-    private let viewModel: FeedViewModel
-    private var cancellables = Set<AnyCancellable>()
-
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        viewModel.$state
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] in self?.render($0) }
-            .store(in: &cancellables)
-        viewModel.send(.viewDidLoad)
-    }
-
-    private func render(_ state: FeedState) {
-        // Drive all UI from a single state snapshot — no partial updates
-    }
-}
 ```
+
+Strengths:
+- Combine publishers and Swift enum associated values make the pattern natural
+- page-scoped: no global store, no cross-feature coupling
+- easy to log/replay intents
+
+Risks:
+- ceremony overhead for screens that only need local state
 
 ## TCA (App-Level)
 
@@ -127,20 +291,194 @@ Prefer TCA when:
 - reducer-driven behavior and explicit action logging are requirements
 - the team is comfortable with the TCA learning curve
 
+```swift
+import ComposableArchitecture
+
+@Reducer
+struct TripList {
+    @ObservableState
+    struct State: Equatable {
+        var trips: IdentifiedArrayOf<Trip> = []
+        var isLoading = false
+    }
+
+    enum Action {
+        case onAppear
+        case tripsLoaded([Trip])
+        case deleteTrip(Trip.ID)
+    }
+
+    @Dependency(\.tripClient) var tripClient
+
+    var body: some ReducerOf<Self> {
+        Reduce { state, action in
+            switch action {
+            case .onAppear:
+                state.isLoading = true
+                return .run { send in
+                    let trips = try await tripClient.fetchAll()
+                    await send(.tripsLoaded(trips))
+                }
+            case .tripsLoaded(let trips):
+                state.trips = IdentifiedArray(uniqueElements: trips)
+                state.isLoading = false
+                return .none
+            case .deleteTrip(let id):
+                state.trips.remove(id: id)
+                return .run { _ in try await tripClient.delete(id) }
+            }
+        }
+    }
+}
+```
+
 Strengths:
 - strong consistency for large apps
 - explicit state and side-effect modeling
-- high leverage for complex, interconnected product flows
+- exhaustive testing via TestStore
 
 Risks:
 - heavier learning curve
 - too much ceremony for small apps or isolated screens
 
+## Clean Architecture
+
+Layers: **Domain** (entities, use cases, repository protocols) -> **Data** (repository implementations, network, persistence) -> **Presentation** (views, view models). Dependencies point inward.
+
+Prefer Clean Architecture when:
+- strict separation is required (enterprise, regulated domains)
+- the domain layer must be testable without any framework dependencies
+- multiple presentation targets share the same business logic
+
+```swift
+// Domain layer — pure Swift, no framework imports
+protocol TripRepository: Sendable {
+    func fetchAll() async throws -> [Trip]
+    func save(_ trip: Trip) async throws
+    func delete(id: UUID) async throws
+}
+
+struct FetchUpcomingTripsUseCase: Sendable {
+    private let repository: TripRepository
+
+    init(repository: TripRepository) {
+        self.repository = repository
+    }
+
+    func execute() async throws -> [Trip] {
+        try await repository.fetchAll()
+            .filter { $0.startDate > .now }
+            .sorted { $0.startDate < $1.startDate }
+    }
+}
+
+// Data layer
+struct RemoteTripRepository: TripRepository {
+    private let client: APIClient
+
+    func fetchAll() async throws -> [Trip] {
+        try await client.request(.get, "/trips")
+    }
+}
+
+// Presentation layer
+@Observable
+class UpcomingTripsViewModel {
+    private(set) var trips: [Trip] = []
+    private let useCase: FetchUpcomingTripsUseCase
+
+    init(useCase: FetchUpcomingTripsUseCase) {
+        self.useCase = useCase
+    }
+
+    func load() async {
+        trips = (try? await useCase.execute()) ?? []
+    }
+}
+```
+
+Key rule: Domain layer must NOT import any framework (no UIKit, no SwiftUI, no Combine as reactive primitive unless it is a defined boundary contract).
+
+## Coordinator Pattern
+
+Separates navigation logic from views. Especially useful in UIKit or hybrid apps with complex navigation flows. In pure SwiftUI apps, `NavigationStack` with path-based routing often replaces the Coordinator.
+
+```swift
+@MainActor
+protocol Coordinator: AnyObject {
+    var childCoordinators: [Coordinator] { get set }
+    var navigationController: UINavigationController { get }
+    func start()
+}
+
+@MainActor
+final class TripCoordinator: Coordinator {
+    var childCoordinators: [Coordinator] = []
+    let navigationController: UINavigationController
+    private let repository: TripRepository
+
+    init(navigationController: UINavigationController, repository: TripRepository) {
+        self.navigationController = navigationController
+        self.repository = repository
+    }
+
+    func start() {
+        let vm = TripListViewModel(repository: repository)
+        vm.onSelectTrip = { [weak self] trip in
+            self?.showDetail(for: trip)
+        }
+        let vc = TripListViewController(viewModel: vm)
+        navigationController.pushViewController(vc, animated: false)
+    }
+
+    private func showDetail(for trip: Trip) {
+        let detailCoordinator = TripDetailCoordinator(
+            navigationController: navigationController,
+            trip: trip,
+            repository: repository
+        )
+        childCoordinators.append(detailCoordinator)
+        detailCoordinator.start()
+    }
+}
+```
+
+Use Coordinators when:
+- the app is UIKit-heavy
+- navigation flows are conditional, branching, or involve deep linking
+- multiple view controllers coordinate presentation and dismissal
+
+## Anti-Patterns
+
+| Anti-Pattern | Problem | Fix |
+|---|---|---|
+| Massive ViewController/View | Unreadable, untestable | Extract ViewModel + services |
+| ViewModel imports SwiftUI | Couples logic to UI framework | Import Foundation only |
+| Singletons for everything | Hidden dependencies, hard to test | Protocol + DI |
+| Feature A imports Feature B | Tight coupling, circular deps | Shared module or coordinator |
+| Network calls in ViewModel | ViewModel does too much | Repository/Service layer |
+| God model (one huge struct) | Hard to maintain | Split into domain entities |
+| Choosing TCA for a two-screen app | Over-engineering | Start with MVVM; escalate when needed |
+| Mixing patterns within a module | Inconsistent, confusing | One pattern per feature module |
+
+## Testing Strategy
+
+| Architecture | Unit Test Target | What to Test |
+|---|---|---|
+| MVVM | ViewModels | State transitions, service calls, error handling |
+| MVI | ViewModel (store) | Intent -> state mapping, side effects |
+| TCA | Reducers via TestStore | State changes, effects, action sequences |
+| Clean | UseCases + ViewModels | Business logic in isolation, correct layer interaction |
+| All | Repositories (with mocks) | Data mapping, caching logic, error propagation |
+
 ## Practical Defaults
 
-- Small app or simple feature: start with MVVM.
-- Single page or flow with complex state transitions: use MVI.
+- Objective-C module: default to MVP (Presenter owns logic, ViewController is passive).
+- Swift (UIKit) module: default to MVI (Intent enum + Combine state pipeline).
+- SwiftUI module with simple state: MVVM with `@Observable`.
 - Large app with shared state, effects, and deep testing requirements: use TCA.
+- Enterprise or multi-target shared domain: use Clean Architecture.
+- Complex navigation in UIKit-heavy project: add Coordinator pattern.
 
 ## Avoid Over-Architecture
 
@@ -148,5 +486,6 @@ Warning signs:
 - adding reducers, actions, and effect plumbing for a static screen
 - introducing a global store before feature boundaries are understood
 - choosing a pattern because it is fashionable rather than because ownership is difficult
+- protocol-heavy Clean Architecture for a simple feature
 
 If a feature only needs a view, a small amount of local state, one service call, and straightforward navigation, MVVM is usually enough.

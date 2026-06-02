@@ -30,7 +30,9 @@ Load the matching skill first, then answer. For tasks that span multiple areas, 
 ## Architecture Defaults
 
 - UI layer: UIKit-first; SwiftUI for new standalone screens when deployment target allows.
-- Page-level state: MVVM or MVI (Combine + enum intents).
+- Objective-C modules: MVP (Presenter owns logic, ViewController is passive).
+- Swift (UIKit) modules: MVI (Intent enum + Combine state pipeline).
+- SwiftUI modules: MVVM with `@Observable`.
 - App-level cross-feature state: TCA when shared state and testability pressure justify it.
 - Concurrency: `async/await` and structured concurrency for new Swift APIs.
 - Dependency management: SPM preferred; CocoaPods for legacy modules or unavailable packages.

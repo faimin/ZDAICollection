@@ -1,20 +1,22 @@
 ---
 name: project-structure-architecture
-description: Use when organizing or standardizing an Apple app repository, choosing project structure or architecture, deciding package strategy, or evaluating third-party libraries for SwiftUI-first or mixed SwiftUI/UIKit apps.
+description: Use when organizing or standardizing an Apple app repository, choosing project structure or architecture, deciding package strategy, or evaluating third-party libraries for UIKit-first, Swift/Objective-C mixed, or SwiftUI apps.
 ---
 
 # Project Structure Architecture
 
 ## When to Use
 - New Apple app setup or major repository reorganization.
-- SwiftUI-first apps that still carry UIKit screens, wrappers, or legacy modules.
-- Unclear architecture choice across MVVM, MVI, TCA, Redux, or modular boundaries.
+- UIKit-first apps with Swift/Objective-C mixed codebases.
+- Unclear architecture choice across MVP, MVI, MVVM, TCA, Clean Architecture, Coordinator, or modular boundaries.
 - SPM vs CocoaPods decisions, package splitting, or third-party library selection.
 - Choosing how Objective-C-heavy modules should stay consistent with the rest of the app.
 
 ## Operating Rules
 - Prefer feature-first structure over layer-first folders once the app has multiple product flows.
-- Prefer SwiftUI-first organization, with UIKit isolated behind explicit legacy, bridge, or host boundaries.
+- For Objective-C modules, prefer MVP (Model-View-Presenter) as the default architecture.
+- For Swift (UIKit) modules, prefer MVI (Model-View-Intent) with Combine as the default architecture.
+- SwiftUI is a secondary UI layer; use it for new standalone screens when deployment target allows, but do not assume it as the primary stack.
 - Prefer `async`/`await` and structured concurrency for new Swift APIs; do not introduce new closure-first surfaces unless bridging older SDKs or Objective-C code.
 - Prefer SPM for first-party modules and third-party dependencies; use CocoaPods deliberately and record the constraint that justifies it.
 - Choose the smallest architecture that preserves state clarity, testability, and ownership boundaries.
@@ -24,17 +26,21 @@ description: Use when organizing or standardizing an Apple app repository, choos
 ## Topic Router
 | Need | Reference |
 | --- | --- |
-| Repository layout, feature boundaries, shared folders | `references/project-structure.md` |
-| MVVM vs MVI vs TCA vs Redux-style choices | `references/architecture-selection.md` |
-| Navigation stacks, router objects, route enums, UIKit coordinators | `references/navigation-and-routing.md` |
+| Repository layout, feature boundaries, SPM modular layout, Clean Architecture layout | `references/project-structure.md` |
+| MVP vs MVI vs MVVM vs TCA vs Clean Architecture vs Coordinator pattern | `references/architecture-selection.md` |
+| UIKit Coordinator, SwiftUI Router, sheets, cross-feature communication | `references/navigation-and-routing.md` |
 | Naming, file organization, comments, previews, async-first conventions | `references/development-conventions.md` |
 | SPM vs CocoaPods, module boundaries, package policy | `references/package-management.md` |
 | Swift and Objective-C library choices by category | `references/library-selection.md` |
 
 ## Quick Decision Matrix
-- Small or medium Apple app with mostly local feature state: start with MVVM.
-- Feature with strict event and state transitions but not app-wide complexity: consider MVI.
-- Cross-feature state, effects, and high testability pressure: consider TCA or a Redux-style pattern.
+- Objective-C module: default to MVP (Presenter owns logic, View is passive).
+- Swift (UIKit) module: default to MVI (Intent enum + Combine state pipeline).
+- SwiftUI module: MVVM with `@Observable` or MVI depending on state complexity.
+- Cross-feature state, effects, and high testability pressure: consider TCA (app-level).
+- Enterprise or multi-target shared domain with strict layer separation: use Clean Architecture.
+- Complex navigation flows in UIKit-heavy project: add Coordinator pattern.
+- Large project (50k+ LOC, 3+ devs, slow incremental builds): modularize with SPM.
 - New Swift dependencies: default to SPM.
 - Objective-C-heavy or pod-centric legacy environment: CocoaPods can be pragmatic, but keep the reason explicit.
 - New Swift service APIs: default to `async`/`await`, then add callback or Combine adapters only when required.
