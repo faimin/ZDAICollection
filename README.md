@@ -208,9 +208,9 @@ Skills 在 Claude Code 处理匹配任务时自动加载。也可在对话中通
 ### 开发Skill
 
 - [swift-ios-skills](https://github.com/dpearson2699/swift-ios-skills): iOS开发skills
+- [Swift-UIKit-Skill](https://github.com/Lakr233/Swift-UIKit-Skill)
 - [ios-dev-skills](https://github.com/12207480/ios-dev-skills)
 - [Super Skills](https://github.com/onmyway133/skills)
-- [Swift-UIKit-Skill](https://github.com/Lakr233/Swift-UIKit-Skill)
 - [Swift-Concurrency-Agent-Skill](https://github.com/AvdLee/Swift-Concurrency-Agent-Skill): Swift并发编程Agent技能
 - [SwiftUI-Agent-Skill](https://github.com/AvdLee/SwiftUI-Agent-Skill): SwiftUI Agent技能
 - [SwiftUI-Agent-Skill](https://github.com/twostraws/SwiftUI-Agent-Skill): SwiftUI Agent技能

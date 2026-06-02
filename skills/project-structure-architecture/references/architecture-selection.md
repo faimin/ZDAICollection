@@ -166,6 +166,148 @@ Key rules:
 - Navigation is delegated to a Coordinator, not owned by the Presenter
 - View protocol methods describe UI state changes, not implementation details
 
+### MVP in Swift (for legacy UIKit modules migrating to Swift)
+
+When an Objective-C MVP module is rewritten in Swift but remains UIKit-based, keep the same MVP structure:
+
+```swift
+// MARK: - View Protocol
+protocol WeatherPresenterView: AnyObject {
+    func showLoading()
+    func hideLoading()
+    func display(_ viewData: WeatherViewData)
+    func displayError(_ message: String)
+}
+
+// MARK: - Presenter
+final class WeatherPresenter {
+    private weak var view: WeatherPresenterView?
+    private let service: WeatherServiceProtocol
+
+    init(view: WeatherPresenterView, service: WeatherServiceProtocol) {
+        self.view = view
+        self.service = service
+    }
+
+    func viewDidLoad() {
+        loadWeather(for: "Beijing")
+    }
+
+    func didSearchCity(_ city: String) {
+        loadWeather(for: city)
+    }
+
+    private func loadWeather(for city: String) {
+        view?.showLoading()
+        service.fetchWeather(for: city) { [weak self] result in
+            guard let self else { return }
+            self.view?.hideLoading()
+            switch result {
+            case .success(let weather):
+                self.view?.display(WeatherViewData(from: weather))
+            case .failure(let error):
+                self.view?.displayError(error.localizedDescription)
+            }
+        }
+    }
+}
+
+// MARK: - ViewController (passive)
+final class WeatherViewController: UIViewController, WeatherPresenterView {
+    private var presenter: WeatherPresenter!
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        presenter = WeatherPresenter(view: self, service: WeatherService())
+        presenter.viewDidLoad()
+    }
+
+    func showLoading() { /* 显示加载 */ }
+    func hideLoading() { /* 隐藏加载 */ }
+    func display(_ viewData: WeatherViewData) { /* 渲染数据 */ }
+    func displayError(_ message: String) { /* 显示错误 */ }
+}
+```
+
+### Unit Testing the Presenter
+
+The core advantage of MVP is that Presenter can be separated from UIKit independent testing:
+
+```swift
+final class MockWeatherView: WeatherPresenterView {
+    var isLoadingShown = false
+    var displayedViewData: WeatherViewData?
+    var displayedError: String?
+
+    func showLoading() { isLoadingShown = true }
+    func hideLoading() { isLoadingShown = false }
+    func display(_ viewData: WeatherViewData) { displayedViewData = viewData }
+    func displayError(_ message: String) { displayedError = message }
+}
+
+final class StubWeatherService: WeatherServiceProtocol {
+    var stubbedResult: Result<Weather, Error> = .failure(WeatherError.noData)
+
+    func fetchWeather(for city: String, completion: @escaping (Result<Weather, Error>) -> Void) {
+        completion(stubbedResult)
+    }
+}
+
+final class WeatherPresenterTests: XCTestCase {
+    func test_success_displaysWeather() {
+        let view = MockWeatherView()
+        let service = StubWeatherService()
+        service.stubbedResult = .success(Weather(city: "Paris", celsius: 22, condition: "sunny"))
+        let presenter = WeatherPresenter(view: view, service: service)
+
+        presenter.viewDidLoad()
+
+        XCTAssertNotNil(view.displayedViewData)
+        XCTAssertEqual(view.displayedViewData?.title, "Paris")
+        XCTAssertNil(view.displayedError)
+    }
+
+    func test_failure_displaysError() {
+        let view = MockWeatherView()
+        let service = StubWeatherService()
+        service.stubbedResult = .failure(WeatherError.noData)
+        let presenter = WeatherPresenter(view: view, service: service)
+
+        presenter.viewDidLoad()
+
+        XCTAssertNotNil(view.displayedError)
+        XCTAssertNil(view.displayedViewData)
+    }
+}
+```
+
+## Communication Patterns: Delegate vs Closure
+
+When choosing how components communicate (especially in MVP and MVI), use this comparison:
+
+| Aspect | Protocol-Delegate | Closures |
+|---|---|---|
+| **Coupling** | Low — communicates through a protocol contract | Slightly higher — closure captures call-site context |
+| **Number of callbacks** | Scales well for many callbacks (multiple delegate methods) | Best for 1-2 callbacks; many closures clutter the API |
+| **Relationship** | Single delegate at a time (1:1) | Each call site can supply a different closure |
+| **Optional methods** | Via default protocol extension implementations | Via optional closure properties |
+| **Memory** | `weak var delegate` prevents retain cycles | `[weak self]` in capture list required |
+| **Best for** | Sustained, multi-event communication (table view, long-lived connections) | One-shot async operations (network, animations) |
+
+### Rule of Thumb
+
+```
+Use DELEGATE when:
+  - The object calls back multiple times over its lifetime
+  - You need many distinct callback methods
+  - Examples: UITableViewDelegate, Presenter -> View, custom services with progress
+
+Use CLOSURES when:
+  - You need a single, one-shot callback
+  - The callback is tightly coupled to the call site
+  - Examples: network completion handlers, animation completions, alert actions
+```
+
 ## MVVM
 
 Prefer MVVM when:
