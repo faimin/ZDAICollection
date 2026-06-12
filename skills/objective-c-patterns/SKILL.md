@@ -1,6 +1,6 @@
 ---
 name: objective-c-patterns
-description: Use when writing or reviewing Objective-C, debugging retain cycles, reasoning about blocks or ARC, using runtime features, or bridging Objective-C with Swift.
+description: Use when writing or reviewing Objective-C — including adding features to existing ObjC pages — debugging retain cycles, reasoning about blocks or ARC, using runtime features, or bridging Objective-C with Swift.
 ---
 
 # Objective-C Patterns

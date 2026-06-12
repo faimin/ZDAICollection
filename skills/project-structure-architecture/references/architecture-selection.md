@@ -308,6 +308,87 @@ Use CLOSURES when:
   - Examples: network completion handlers, animation completions, alert actions
 ```
 
+## Page Communication
+
+Cross-page (cross-ViewController) communication follows different patterns depending on the language boundary:
+
+### Swift ↔ Swift: Combine Subject (MVI-style)
+
+Use `PassthroughSubject` or `CurrentValueSubject` with enum associated values to communicate between Swift pages. This keeps the event flow typed, traceable, and consistent with the MVI intent pattern.
+
+```swift
+// 定义页面间通信事件
+enum ProfileEvent {
+    case avatarUpdated(URL)
+    case nicknameChanged(String)
+    case logout
+}
+
+// 发送方持有 subject，创建时传给接收方
+final class EditProfileViewController: UIViewController {
+    let event = PassthroughSubject<ProfileEvent, Never>()
+
+    func didFinishEditing(newName: String) {
+        event.send(.nicknameChanged(newName))
+    }
+}
+
+// 接收方订阅
+let editVC = EditProfileViewController()
+editVC.event
+    .receive(on: DispatchQueue.main)
+    .sink { [weak self] event in
+        switch event {
+        case .nicknameChanged(let name):
+            self?.updateNickname(name)
+        case .avatarUpdated(let url):
+            self?.updateAvatar(url)
+        case .logout:
+            self?.handleLogout()
+        }
+    }
+    .store(in: &cancellables)
+```
+
+Use `CurrentValueSubject` when the receiver needs the latest value immediately upon subscription (state-like). Use `PassthroughSubject` for transient events that only matter when observed in real time.
+
+### Swift ↔ Objective-C / Objective-C ↔ Objective-C: Closure/Block Callbacks
+
+When crossing the Swift/ObjC boundary or communicating between two ObjC pages, use closure (block) callbacks. Combine subjects are not available in Objective-C, and block callbacks are the natural inter-page pattern for these scenarios.
+
+```objc
+// ObjC 页面定义回调 block
+typedef void(^SettingsDidChangeHandler)(NSDictionary *changedSettings);
+
+@interface SettingsViewController : UIViewController
+@property (nonatomic, copy) SettingsDidChangeHandler onSettingsChanged;
+@end
+
+// 调用方（ObjC 或 Swift）创建时注入
+SettingsViewController *vc = [[SettingsViewController alloc] init];
+vc.onSettingsChanged = ^(NSDictionary *changed) {
+    [self applySettings:changed];
+};
+```
+
+```swift
+// Swift 页面向 ObjC 页面传递回调
+let settingsVC = SettingsViewController()
+settingsVC.onSettingsChanged = { [weak self] changed in
+    self?.applySettings(changed)
+}
+```
+
+### Communication Pattern Selection
+
+| Scenario | Pattern | Reason |
+|---|---|---|
+| Swift page → Swift page | Combine Subject + enum | 类型安全、可追溯、与 MVI 一致 |
+| Swift page → ObjC page | Closure/Block | ObjC 无法消费 Combine |
+| ObjC page → ObjC page | Block callback | 原生支持、简洁 |
+| ObjC page → Swift page | Block callback | 跨语言最小公约数 |
+| 1:N broadcast (same language) | NotificationCenter 或 Combine Subject | 多个监听者场景 |
+
 ## MVVM
 
 Prefer MVVM when:

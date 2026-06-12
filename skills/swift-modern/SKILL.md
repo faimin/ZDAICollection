@@ -1,6 +1,6 @@
 ---
 name: swift-modern
-description: Use when writing, reviewing, or migrating Swift application code across Swift 4.2 through 6.3, especially for concurrency, Combine, Codable, observation, Swift Testing, interoperability, and version-sensitive language decisions.
+description: Use when writing, reviewing, or migrating Swift application code across Swift 4.2 through 6.3 — including adding features to existing Swift pages. Especially for concurrency, Combine, Codable, observation, Swift Testing, interoperability, and version-sensitive language decisions.
 ---
 
 # Swift Modern

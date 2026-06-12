@@ -1,6 +1,6 @@
 ---
 name: project-structure-architecture
-description: Use when organizing or standardizing an Apple app repository, choosing project structure or architecture, deciding package strategy, or evaluating third-party libraries for UIKit-first, Swift/Objective-C mixed, or SwiftUI apps.
+description: Use when organizing or standardizing an Apple app repository, choosing project structure or architecture, deciding package strategy, evaluating third-party libraries, or determining page communication patterns — for UIKit-first, Swift/Objective-C mixed, or SwiftUI apps. Applies to new pages and modifications to existing pages alike.
 ---
 
 # Project Structure Architecture
@@ -27,7 +27,7 @@ description: Use when organizing or standardizing an Apple app repository, choos
 | Need | Reference |
 | --- | --- |
 | Repository layout, feature boundaries, SPM modular layout, Clean Architecture layout | `references/project-structure.md` |
-| MVP vs MVI vs MVVM vs TCA vs Clean Architecture vs Coordinator pattern | `references/architecture-selection.md` |
+| MVP vs MVI vs MVVM vs TCA vs Clean Architecture vs Coordinator pattern, page communication | `references/architecture-selection.md` |
 | UIKit Coordinator, SwiftUI Router, sheets, cross-feature communication | `references/navigation-and-routing.md` |
 | Naming, file organization, comments, previews, async-first conventions | `references/development-conventions.md` |
 | SPM vs CocoaPods, module boundaries, package policy | `references/package-management.md` |

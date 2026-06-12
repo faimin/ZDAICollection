@@ -9,7 +9,7 @@ Reusable Apple and iOS engineering guidance lives in `skills/` and should not be
 ## 2. Repository Workflow
 
 - When modifying code, only make changes directly related to the request. Do not auto-format, restyle, or refactor surrounding code that was not asked to be changed.
-- Write Chinese comments explaining the implementation approach and key logic so other team members can maintain the code.
+- All new or modified code must include Chinese comments explaining the implementation approach and key logic so other team members can maintain the code. This applies to every code change without exception.
 - Prefer checking the existing repository structure and active patterns before editing.
 - For UI-related work, provide a concrete plan first. Use ASCII sketches when a layout or flow benefits from visual structure.
 - Use `Git worktree` when isolation is helpful for multi-step feature work.
@@ -25,6 +25,7 @@ Reusable Apple and iOS engineering guidance lives in `skills/` and should not be
 - Critical user flows should keep or gain UI-test coverage when the repository already exercises that path.
 - If the task depends on product design, prefer the existing Figma or design-source direction and do not hardcode ad hoc visual values when a design token or existing asset should be used.
 - When using CocoaPods with KuaiLiao spec sources, use `https://github.com/KuaiLiao/KLSpecs.git` as the pod source.
+- Page communication: Swift↔Swift uses Combine `PassthroughSubject`/`CurrentValueSubject` with enum associated values (MVI-style event bus); Swift↔ObjC or ObjC↔ObjC uses closure/block callbacks.
 
 ## 4. Security And Safety
 
@@ -49,12 +50,13 @@ Route by the dominant problem shape:
 
 Triage rules:
 
-1. Identify the dominant layer: UIKit UI, Objective-C behavior, Swift language/SwiftUI UI, or project architecture.
-2. If multiple layers are involved, name the dominant one before loading a second skill.
-3. Read the matching specialist skill before answering from memory.
-4. Load a second specialist skill only when the task genuinely spans two domains.
-5. Keep one specialist skill as the primary owner so guidance stays coherent.
-6. Keep reusable language, UIKit, Objective-C, architecture, and library-selection guidance inside the skill system rather than expanding this file.
+1. Skills apply to ALL code changes in the relevant domain — not only new pages/screens, but also adding features, modifying logic, or fixing bugs in existing pages.
+2. Identify the dominant layer: UIKit UI, Objective-C behavior, Swift language/SwiftUI UI, or project architecture.
+3. If multiple layers are involved, name the dominant one before loading a second skill.
+4. Read the matching specialist skill before answering from memory.
+5. Load a second specialist skill only when the task genuinely spans two domains.
+6. Keep one specialist skill as the primary owner so guidance stays coherent.
+7. Keep reusable language, UIKit, Objective-C, architecture, and library-selection guidance inside the skill system rather than expanding this file.
 
 ## 6. Platform Capabilities Quick Reference
 

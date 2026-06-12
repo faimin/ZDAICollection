@@ -16,7 +16,7 @@ SwiftUI is used as a secondary UI layer where appropriate.
 
 ## Skill Routing
 
-When working on this project, load the relevant skill before answering:
+When working on this project, load the relevant skill before answering. Skills apply to ALL code changes — not only new pages, but also adding features, modifying logic, or fixing bugs in existing pages:
 
 | Task | Skill |
 | --- | --- |
@@ -40,13 +40,14 @@ Load the matching skill first, then answer. For tasks that span multiple areas, 
 ## Code Conventions
 
 - When modifying code, only make changes directly related to the request. Do not auto-format, restyle, or refactor surrounding code that was not asked to be changed.
-- Write Chinese comments explaining the implementation approach and key logic so other team members can maintain the code.
+- All new or modified code must include Chinese comments explaining the implementation approach and key logic so other team members can maintain the code. This applies to every code change without exception.
 - Category methods must use the project's prefix (e.g. `xx_`), not a hardcoded abbreviation.
 - In Objective-C getters, build the object into a local variable and assign `_ivar` last.
 - Wrap multi-property Objective-C object initialization in `({ })` statement expressions.
 - Always check `respondsToSelector:` before calling optional delegate methods.
 - Prefer `RACObserve` over raw KVO when the project uses ReactiveObjC.
 - Prefer inheritance over swizzling; use swizzling only when no override or delegate hook exists.
+- Page communication: Swift↔Swift uses Combine `PassthroughSubject`/`CurrentValueSubject` with enum associated values (MVI-style event bus); Swift↔ObjC or ObjC↔ObjC uses closure/block callbacks.
 
 ## Security
 

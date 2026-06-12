@@ -1,6 +1,6 @@
 ---
 name: uikit-modern
-description: Use when building, reviewing, or modernizing UIKit screens for iOS 13 through iOS 26, especially for collection views, diffable data sources, compositional layout, keyboard-safe layout, scenes, and modern presentation patterns.
+description: Use when building, reviewing, or modernizing UIKit screens for iOS 13 through iOS 26 — including adding new features to existing pages. Especially for collection views, diffable data sources, compositional layout, keyboard-safe layout, scenes, and modern presentation patterns.
 ---
 
 # UIKit Modern
