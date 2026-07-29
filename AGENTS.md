@@ -9,7 +9,7 @@ Reusable Apple and iOS engineering guidance lives in `skills/` and should not be
 ## 2. Repository Workflow
 
 - When modifying code, only make changes directly related to the request. Do not auto-format, restyle, or refactor surrounding code that was not asked to be changed.
-- All new or modified code must include Chinese comments explaining the implementation approach and key logic so other team members can maintain the code. This applies to every code change without exception.
+- All new or modified code must include Chinese comments explaining the implementation approach and key logic so other team members can maintain the code. This applies to every code change without exception. Write comments directly in Chinese without explicitly labeling them as "中文注释".
 - Prefer checking the existing repository structure and active patterns before editing.
 - For UI-related work, provide a concrete plan first. Use ASCII sketches when a layout or flow benefits from visual structure.
 - Use `Git worktree` when isolation is helpful for multi-step feature work.
